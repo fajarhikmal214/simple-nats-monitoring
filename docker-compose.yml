@@ -1,0 +1,83 @@
+version: "3"
+
+networks:
+  nats_monitoring_network:
+    driver: bridge
+
+services:
+
+  nats-server:
+    command:
+      - "-p"
+      - "4222"
+      - "-m"
+      - "8222"
+      - "-js"
+      - "-c=/opt/run/simple-server.conf"
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - ./nats/:/opt/run/
+      - /tmp/docker-shared-volumes/nats:/tmp/nats/jetstream
+    image: nats:latest
+    container_name: nats
+    networks:
+      - nats_monitoring_network
+    env_file:
+      - .env
+    labels:
+      org.label-schema.group: "nats-monitoring"
+
+  surveyor:
+    image: natsio/nats-surveyor
+    container_name: nats-surveyor
+    restart: always
+    ports:
+      - "7777:7777"
+    volumes:
+      - ./observations:/observations
+      - ./jetstream:/jetstream
+    entrypoint: /nats-surveyor
+    command: -c ${NATS_SURVEYOR_SERVER_COUNT} -s "${NATS_SURVEYOR_SERVERS}" --observe /observations --jetstream /jetstream
+    networks:
+      - nats_monitoring_network
+    env_file:
+      - .env
+    labels:
+      org.label-schema.group: "nats-monitoring"
+    depends_on:
+      - nats-server
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    restart: always
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command: --config.file=/etc/prometheus/prometheus.yml
+    networks:
+      - nats_monitoring_network
+    ports:
+      - "9090:9090"
+    labels:
+      org.label-schema.group: "nats-monitoring"
+    depends_on:
+      - surveyor
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - nats_monitoring_network
+    labels:
+      org.label-schema.group: "nats-monitoring"
+    depends_on:
+      - prometheus
