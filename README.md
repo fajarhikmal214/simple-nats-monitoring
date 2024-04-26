@@ -1,5 +1,3 @@
-Simple Nats Monitoring
-
 ## Quick Start
 
 1. Clone the project
@@ -21,7 +19,7 @@ $ cp .env.example .env
 $ docker-compose up --build
 ```
 
-I try to provide Grafana Nats Dashboard in json file
+I try to provide Grafana Nats Dashboard in json file [here](https://github.com/fajarhikmal214/simple-nats-monitoring/blob/master/grafana-nats-dash.json)
 
 
 ... Very soon I'll complete this README (hopefully)
@@ -29,3 +27,4 @@ I try to provide Grafana Nats Dashboard in json file
 
 
 ## Quick Result
+![image](https://github.com/fajarhikmal214/simple-nats-monitoring/assets/79292118/b9d26f20-a570-46a7-a857-19f4fde4d9b5)
