@@ -13,21 +13,39 @@ services:
       - "-m"
       - "8222"
       - "-js"
-      - "-c=/opt/run/simple-server.conf"
+      # - "-c=/opt/run/simple-server.conf" # config file to change auth with user and pass 
+      - "-auth"
+      - ${NATS_AUTH_TOKEN}
+      - "--debug"
     ports:
       - "4222:4222"
       - "8222:8222"
     volumes:
       - ./nats/:/opt/run/
       - /tmp/docker-shared-volumes/nats:/tmp/nats/jetstream
-    image: nats:latest
-    container_name: nats
+      # - ./nats/entrypoint.sh:/opt/run/entrypoint.sh
+    # entrypoint: ["/bin/sh", "/opt/run/entrypoint.sh"]
+    image: nats:alpine3.19 # use alpine, able to exec the container
+    # image: nats:latest
+    container_name: nats-server
     networks:
       - nats_monitoring_network
     env_file:
       - .env
     labels:
       org.label-schema.group: "nats-monitoring"
+
+  prometheus-nats-exporter:
+    image: natsio/prometheus-nats-exporter:latest
+    ports:
+      - "7778:7777"
+    environment:
+      - NATS_URL=${NATS_URL}
+    networks:
+      - nats_monitoring_network
+    command: -varz -connz -connz_detailed -routez -serverz -channelz -subz -healthz ${NATS_MONITORING_URL}
+    depends_on:
+      - nats-server
 
   surveyor:
     image: natsio/nats-surveyor
@@ -65,6 +83,7 @@ services:
       org.label-schema.group: "nats-monitoring"
     depends_on:
       - surveyor
+      - prometheus-nats-exporter
 
   grafana:
     image: grafana/grafana
